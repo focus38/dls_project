@@ -1,3 +1,6 @@
 unicorn=0.34.3
 fastapi==0.115.12
 python-multipart==0.0.20
+ultralytics=8.3.153
+torch=2.4.1
+

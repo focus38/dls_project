@@ -2,63 +2,51 @@ import os
 import uuid
 import asyncio
 
+from PIL import Image
 from pathlib import Path
 from typing import Dict, List
+
+from contextlib import asynccontextmanager
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI, UploadFile, HTTPException
 
-app = FastAPI()
-
-app.mount("/static", StaticFiles(directory="static"), name="static")
+from detector import ElectricMeterDetector
 
 # Конфигурация.
 TEMP_IMAGE_FOLDER = "temp"
-os.makedirs(TEMP_IMAGE_FOLDER, exist_ok=True)
 
 # Очереди и хранилища.
-processing_queue: asyncio.Queue[str] = asyncio.Queue()
-processed_images: Dict[str, str] = {}  # uuid -> filepath
-processing_tasks: Dict[str, asyncio.Task] = {}  # uuid -> task
+processing_queue = asyncio.Queue()
+processed_images: Dict[str, str] = {} # uuid -> filepath
+processing_tasks: Dict[str, asyncio.Task] = {} # uuid -> task
+
+detector = None
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global detector
+    try:
+        detector = await ElectricMeterDetector().load_model()
+        
+        # Создаем временную папку для изображений.
+        os.makedirs(TEMP_IMAGE_FOLDER, exist_ok=True)
+        
+        # Запуск обработчика очереди.
+        asyncio.create_task(process_queue())
+        yield
+    finally:
+        # Очистка ресурсов.
+        detector.release_resource()
+        detector = None
+        print("Resources released.")
+
+app = FastAPI(lifespan=lifespan)
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
 async def serve_index():
     return FileResponse("static/index.html")
-
-# Функция обработки изображения. Пока заглушка.
-async def process_image(image_uuid: str, input_path: str):
-    try:
-        # Здесь будет логика обработки изображения.
-        # Пока для примера ждем 10 секунд.
-        await asyncio.sleep(10)
-        
-        # Сохраняем "обработанное" изображение.
-        output_path = os.path.join(TEMP_IMAGE_FOLDER, f"processed_{image_uuid}.jpg")
-        Path(input_path).rename(output_path)
-        
-        # Добавляем в список готовых изображений.
-        processed_images[image_uuid] = output_path
-    finally:
-        # Удаляем задачу из списка активных.
-        processing_tasks.pop(image_uuid, None)
-
-# Фоновая задача для обработки очереди.
-async def process_queue():
-    while True:
-        image_uuid = await processing_queue.get()
-        input_path = os.path.join(TEMP_IMAGE_FOLDER, f"{image_uuid}.jpg")
-        
-        # Создаем задачу на обработку и сохраняем ссылку на нее.
-        task = asyncio.create_task(process_image(image_uuid, input_path))
-        processing_tasks[image_uuid] = task
-        
-        # Помечаем задачу, как выполненную в очереди.
-        processing_queue.task_done()
-
-# Запускаем обработчик очереди при старте приложения.
-@app.on_event("startup")
-async def startup_event():
-    asyncio.create_task(process_queue())
 
 # Роут для загрузки изображения.
 @app.post("/upload/")
@@ -84,13 +72,43 @@ async def check_status(image_uuid: str):
     elif image_uuid in processing_tasks:
         return {"status": "processing"}
     else:
-        raise HTTPException(status_code=404, detail="Image not found")
+        raise HTTPException(status_code=404, detail="Image not found.")
 
 # Роут для получения обработанного изображения.
 @app.get("/result/{image_uuid}")
 async def get_result(image_uuid: str):
     if image_uuid not in processed_images:
-        raise HTTPException(status_code=404, detail="Image not processed or not found")
+        raise HTTPException(status_code=404, detail="Image not processed or not found.")
     
     file_path = processed_images[image_uuid]
     return FileResponse(file_path)
+
+# Фоновая задача для обработки очереди.
+async def process_queue():
+    while True:
+        image_uuid = await processing_queue.get()
+        input_path = os.path.join(TEMP_IMAGE_FOLDER, f"{image_uuid}.jpg")
+        # Создаем задачу для обработки изображения и сохраняем ссылку на нее.
+        task = asyncio.create_task(process_queue_item(image_uuid, input_path))
+        processing_tasks[image_uuid] = task
+        # В очереди на обработку помечаем задачу, как выполненную.
+        processing_queue.task_done()
+
+async def process_queue_item(image_uuid: str, input_path: str):
+    try:
+        def sync_process_image():
+            return detector.process_image(image_uuid, input_path)
+        
+        detector_result = await asyncio.get_event_loop().run_in_executor(None, sync_process_image)
+        
+        output_path = os.path.join(TEMP_IMAGE_FOLDER, f"processed_{image_uuid}.jpg")
+        detector_image = detector_result.plot()
+        result_image = Image.fromarray(detector_image[..., ::-1])
+        result_image.save(output_path)
+        processed_images[image_uuid] = output_path
+    except Exception as e:
+        print(f"Error occurred while processing the image {image_uuid}: {e}")
+        print(traceback.format_exc())
+        raise
+    finally:
+        processing_tasks.pop(image_uuid, None)

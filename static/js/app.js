@@ -29,6 +29,7 @@ $(document).ready(function() {
                 reader.onload = function(e) {
                     $imagePreview.attr('src', e.target.result);
                     $previewRightContainer.hide();
+                    $uploadStatus.find('.alert').hide();
 					$previewLeftContainer.show();
                 }
                 reader.readAsDataURL(file);
@@ -121,7 +122,7 @@ $(document).ready(function() {
                 clearInterval(checkStatusInterval);
 				$statusBadge.text('Ошибка').removeClass().addClass('badge bg-danger status-badge ms-2');
             }
-        }, 2000); // Проверяем каждые 2 секунды
+        }, 500); // Проверяем каждые 500 млс.
     }
 
     // Загрузка обработанного изображения
