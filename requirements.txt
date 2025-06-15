@@ -1,6 +1,5 @@
-unicorn
+uvicorn
 fastapi
 python-multipart
 ultralytics
 torch
-
