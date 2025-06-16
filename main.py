@@ -1,4 +1,6 @@
 import asyncio
+import torch
+
 from contextlib import asynccontextmanager
 
 from fastapi.responses import FileResponse
@@ -7,6 +9,8 @@ from fastapi import FastAPI, UploadFile, HTTPException
 from common.exceptions import ImageNotFoundException
 
 from services.detector_service import DetectorService
+
+torch.classes.__path__ = [os.path.join(torch.__path__[0], torch.classes.__file__)] 
 
 DETECTOR_MODEL_PATH = './models/emeter_yolo11n_v1.pt'
 
