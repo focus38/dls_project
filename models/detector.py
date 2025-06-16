@@ -18,7 +18,7 @@ class ElectricMeterDetector():
         return self
 
     # Освобождение ресурсов.
-    def release_resource():
+    def release_resource(self):
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
     
