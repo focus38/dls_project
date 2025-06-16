@@ -119,7 +119,7 @@ $(document).ready(function() {
                 clearInterval(checkStatusInterval);
                 $statusBadge.text('Ошибка').removeClass().addClass('badge bg-danger status-badge ms-2');
             }
-        }, 500); // Проверяем каждые 500 млс.
+        }, 2000); // Проверяем каждые 2000 млс.
     }
 
     // Загрузка обработанного изображения
