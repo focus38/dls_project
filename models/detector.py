@@ -5,6 +5,8 @@ import asyncio
 from PIL import Image
 from ultralytics import YOLO
 
+torch.classes.__path__ = []
+
 class ElectricMeterDetector():
     def __init__(self, model_path='emeter_yolo11n_v1.pt'):
         self.conf_threshold = 0.59
