@@ -1,40 +1,39 @@
 $(document).ready(function() {
     // Элементы интерфейса
     const $uploadBtn = $('#uploadBtn');
+    const $uploadSpinner = $('#uploadSpinner');
     const $imageUpload = $('#imageUpload');
     const $uploadStatus = $('#uploadStatus');
     const $fileUuid = $('#fileUuid');
     const $statusBadge = $('#statusBadge');
-	const $previewLeftContainer = $('#previewLeftContainer');
+    const $previewLeftContainer = $('#previewLeftContainer');
     const $previewRightContainer = $('#previewRightContainer');
-	const $fileInfo = $('#fileInfo');
-	const $imagePreview = $('#imagePreview');
+    const $fileInfo = $('#fileInfo');
+    const $imagePreview = $('#imagePreview');
     const $processedImage = $('#processedImage');
-    const $progressBar = $('#uploadProgress');
-    const $progressContainer = $('.progress');
 
     let currentUuid = null;
     let checkStatusInterval = null;
 
-	// Обработчик изменения файла. Показываем файл в preview области.
+    // Обработчик изменения файла. Показываем файл в preview области.
     $imageUpload.on('change', function() {
         if (this.files.length) {
-			const file = this.files[0];
+            const file = this.files[0];
             const reader = new FileReader();
-			
-			// Показываем информацию о файле
+            
+            // Показываем информацию о файле
             $fileInfo.html(`Имя: ${file.name},  Размер: ${(file.size / 1024).toFixed(2)} KB, Тип: ${file.type}`);
-			// Для изображений - создаем превью
+            // Для изображений - создаем превью
             if (file.type.match('image.*')) {
                 reader.onload = function(e) {
                     $imagePreview.attr('src', e.target.result);
                     $previewRightContainer.hide();
                     $uploadStatus.find('.alert').hide();
-					$previewLeftContainer.show();
+                    $previewLeftContainer.show();
                 }
                 reader.readAsDataURL(file);
             } else {
-				$previewRightContainer.hide();
+                $previewRightContainer.hide();
                 $previewLeftContainer.hide();
                 alert('Пожалуйста, выберите файл изображения');
             }
@@ -51,9 +50,9 @@ $(document).ready(function() {
         const file = $imageUpload[0].files[0];
         
         try {
-            // Показываем прогресс
-            $progressContainer.show();
-            $progressBar.css('width', '0%');
+            // Показываем spinner
+            $uploadSpinner.removeClass("d-none");
+            $uploadBtn.addClass("disabled");
             
             // Отправка файла на сервер
             const formData = new FormData();
@@ -67,11 +66,9 @@ $(document).ready(function() {
                 contentType: false,
                 xhr: function() {
                     const xhr = new window.XMLHttpRequest();
-                    xhr.upload.addEventListener('progress', function(e) {
-                        if (e.lengthComputable) {
-                            const percent = Math.round((e.loaded / e.total) * 100);
-                            $progressBar.css('width', percent + '%');
-                        }
+                    xhr.upload.addEventListener('loadend', function(e) {
+                        $uploadSpinner.addClass("d-none");
+                        $uploadBtn.removeClass("disabled");
                     });
                     return xhr;
                 }
@@ -91,8 +88,8 @@ $(document).ready(function() {
             console.error('Error:', error);
             alert('Ошибка при загрузке файла: ' + error.responseJSON?.detail || error.statusText);
         } finally {
-            $progressBar.css('width', '100%');
-            setTimeout(() => $progressContainer.hide(), 1000);
+            $uploadSpinner.addClass("d-none");
+            $uploadBtn.removeClass("disabled");
         }
     });
 
@@ -120,7 +117,7 @@ $(document).ready(function() {
             } catch (error) {
                 console.error('Status check error:', error);
                 clearInterval(checkStatusInterval);
-				$statusBadge.text('Ошибка').removeClass().addClass('badge bg-danger status-badge ms-2');
+                $statusBadge.text('Ошибка').removeClass().addClass('badge bg-danger status-badge ms-2');
             }
         }, 500); // Проверяем каждые 500 млс.
     }
@@ -141,7 +138,7 @@ $(document).ready(function() {
             
         } catch (error) {
             console.error('Error loading result:', error);
-			$statusBadge.text('Ошибка').removeClass().addClass('badge bg-danger status-badge ms-2');
+            $statusBadge.text('Ошибка').removeClass().addClass('badge bg-danger status-badge ms-2');
         }
     }
 });
