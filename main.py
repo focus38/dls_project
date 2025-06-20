@@ -1,3 +1,5 @@
+import os
+import uvicorn
 import asyncio
 
 from contextlib import asynccontextmanager
@@ -59,3 +61,6 @@ async def get_result(image_uuid: str):
             raise HTTPException(status_code=404, detail=ex.message)
         else:
             raise HTTPException(status_code=500, detail='Some error occurred.')
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", "8080")), log_level="info", log_config="log_config.yaml")

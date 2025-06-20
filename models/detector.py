@@ -1,6 +1,7 @@
 import uuid
 import torch
 import asyncio
+import logging
 
 from PIL import Image
 from ultralytics import YOLO
@@ -10,11 +11,12 @@ class ElectricMeterDetector():
         self.conf_threshold = 0.59
         self.model_path = model_path
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.logger = logging.getLogger(__name__)
 
     async def load_model(self):
         self.model = YOLO(self.model_path)
         self.model.to(self.device)
-        print(f"Detector loaded. The '{self.device}' device will be used.")
+        self.logger.info(f"Detector loaded. The '{self.device}' device will be used.")
         return self
 
     # Освобождение ресурсов.
