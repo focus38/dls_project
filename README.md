@@ -82,6 +82,7 @@
 - GET /values/{image_uuid} - возвращает распознанные значения счетчика (результат распознавания),
 
 ### Примеры работы приложения
+<img src="doc/image/demo.gif" alt="Пример детекции">
 <img src="doc/image/e5.png" alt="Пример детекции">
 <img src="doc/image/ma6.png" alt="Пример детекции">
 <img src="doc/image/oa11.png" alt="Пример детекции">
