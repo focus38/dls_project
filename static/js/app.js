@@ -1,3 +1,6 @@
+MAX_FILE_SIZE_MB = 3
+MAX_FILE_SIZE_KB = 1024 * MAX_FILE_SIZE_MB
+
 $(document).ready(function() {
     // Элементы интерфейса
     const $uploadBtn = $('#uploadBtn');
@@ -11,6 +14,7 @@ $(document).ready(function() {
     const $fileInfo = $('#fileInfo');
     const $imagePreview = $('#imagePreview');
     const $processedImage = $('#processedImage');
+    const $indicatorValues = $('#indicatorValues');
 
     let currentUuid = null;
     let checkStatusInterval = null;
@@ -20,23 +24,32 @@ $(document).ready(function() {
         if (this.files.length) {
             const file = this.files[0];
             const reader = new FileReader();
-            
+            const fileSize = file.size / 1024; // KB
             // Показываем информацию о файле
-            $fileInfo.html(`Имя: ${file.name},  Размер: ${(file.size / 1024).toFixed(2)} KB, Тип: ${file.type}`);
-            // Для изображений - создаем превью
-            if (file.type.match('image.*')) {
-                reader.onload = function(e) {
-                    $imagePreview.attr('src', e.target.result);
-                    $previewRightContainer.hide();
-                    $uploadStatus.find('.alert').hide();
-                    $previewLeftContainer.show();
-                }
-                reader.readAsDataURL(file);
-            } else {
-                $previewRightContainer.hide();
-                $previewLeftContainer.hide();
-                alert('Пожалуйста, выберите файл изображения');
+            $fileInfo.empty()
+            $fileInfo.append(`<li class="list-group-item list-group-item-dark bgc-light">Имя: ${file.name}, Размер: ${(file.size / 1024).toFixed(2)} KB, Тип: ${file.type}</li>`);
+            
+            $previewRightContainer.hide();
+            $previewLeftContainer.hide();
+            $indicatorValues.empty();
+            
+            if (!file.type.match('image.*')) {
+                alert('Пожалуйста, выберите файл изображения.');
+                return;
             }
+            if (fileSize > MAX_FILE_SIZE_KB) {
+                alert('Пожалуйста, выберите файл размером меньше ' + MAX_FILE_SIZE_MB + 'MB.');
+                return;
+            }
+            // Для изображений - создаем превью
+            reader.onload = function(e) {
+                $imagePreview.attr('src', e.target.result);
+                $previewRightContainer.hide();
+                $uploadStatus.find('.alert').hide();
+                $previewLeftContainer.show();
+                $indicatorValues.empty();
+            }
+            reader.readAsDataURL(file);
         }
     });
 
@@ -135,7 +148,13 @@ $(document).ready(function() {
                 .on('error', function() {
                     throw new Error('Не удалось загрузить изображение');
                 });
-            
+            const indicatorValues = await $.get(`/values/${currentUuid}`);
+            $indicatorValues.empty();
+            if (indicatorValues != null && indicatorValues.values != null) {
+                for(let i in indicatorValues.values) {
+                    $indicatorValues.append('<li class="list-group-item list-group-item-light">Показание: ' + indicatorValues.values[i] + "</li>")
+                }
+            }
         } catch (error) {
             console.error('Error loading result:', error);
             $statusBadge.text('Ошибка').removeClass().addClass('badge bg-danger status-badge ms-2');

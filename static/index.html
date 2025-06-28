@@ -12,6 +12,9 @@
         #previewContainer { display: none; }
         #processedImage { max-width: 100%; max-height: 640px; }
         .status-badge { font-size: 0.9rem; }
+        .bgc-light {
+            background-color: rgba(var(--bs-secondary-bg-rgb), var(--bs-bg-opacity)) !important
+        }
     </style>
 </head>
 <body>
@@ -21,8 +24,9 @@
             <div class="col-md-6 left-panel bg-body-secondary p-4">
                 <h2 class="mb-4">Загрузка изображения</h2>
                 <div class="mb-3">
-                    <label for="imageUpload" class="form-label">Выберите файл изображения</label>
                     <div class="row">
+                        <label class="col-2 d-flex flex-column justify-content-center"
+                               style="max-width: 140px !important;">Фото счетчика</label>
                         <div class="col">
                             <input class="form-control" type="file" id="imageUpload" accept="image/*">
                         </div>
@@ -35,9 +39,9 @@
                     </div>
                 </div>
 
-                <div id="previewLeftContainer" class="text-center mt-3" style="display: none;">
+                <div id="previewLeftContainer" class="mt-3" style="display: none;">
                     <img id="imagePreview" src="#" alt="Изображение до детекции" class="img-thumbnail" style="max-height: 640px;">
-                    <div class="mt-2"><small id="fileInfo" class="text-muted"></small></div>
+                    <ul class="list-group mt-3" id="fileInfo"></ul>
                 </div>
             </div>
             
@@ -45,13 +49,14 @@
             <div class="col-md-6 right-panel p-4">
                 <h2 class="mb-4">Результат обработки</h2>
                 <div id="uploadStatus" class="mt-3">
-                    <div class="alert alert-info" role="alert" style="display: none; --bs-alert-padding-y: 1.3rem;">
+                    <div class="alert alert-info px-2 py-2" role="alert" style="display: none; --bs-alert-padding-y: 1.3rem;">
                         Идентификатор: <span id="fileUuid" class="fw-bold"></span>
                         <span id="statusBadge" class="badge bg-secondary status-badge ms-2">Ожидание</span>
                     </div>
                 </div>
-                <div id="previewRightContainer" class="text-center mt-3" style="display: none;">
+                <div id="previewRightContainer" class="mt-3" style="display: none;">
                     <img id="processedImage" class="img-fluid rounded shadow" src="" alt="Результат детекции">
+                    <ul class="list-group mt-3" id="indicatorValues"></ul>
                 </div>
             </div>
         </div>
