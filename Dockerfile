@@ -19,7 +19,7 @@ RUN apt-get update && \
 COPY . /app/
 
 # Expose the port the app runs in
-EXPOSE 80
+EXPOSE 8080
 
 # Define the command to start the container
 CMD python main.py
