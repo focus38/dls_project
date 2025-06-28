@@ -30,6 +30,7 @@ class DetectorService:
         self.logger = logging.getLogger(__name__)
 
     async def initialize(self):
+        self.logger.info("Initialize DetectorService")
         self.detector = await ElectricMeterDetector(self.detector_model_path).load_model()
         self.recognizer = await NumbersRecognizer(self.recognizer_model_path).load_model()
         # Создаем временную папку для изображений.
@@ -142,22 +143,25 @@ class DetectorService:
     # Удаляет файлы старше file_lifetime секунд.
     async def _cleanup_old_files(self):
         while True:
-            await asyncio.sleep(30)  # Проверка каждые 30 секунд
-            self.logger.info("Deleting old files has started.")
+            await asyncio.sleep(60)  # Проверка каждые 30 секунд
+            self.logger.info("Started cleanup old files.")
             current_time = datetime.now()
             to_delete = []
     
             for image_uuid, file_data in self.processed_images.items():
                 file_time = file_data["timestamp"]
                 if (current_time - file_time) > timedelta(seconds=self.file_lifetime):
-                    to_delete.append(image_uuid)
+                    self.logger.info(f"Planning to delete the file with ID {image_uuid}, current time {current_time}, file_time {file_time}.")
                     try:
                         if os.path.exists(file_data["input_path"]):
                             os.unlink(file_data["input_path"])
                         if os.path.exists(file_data["output_path"]):
                             os.unlink(file_data["output_path"])
+                        to_delete.append(image_uuid)
                     except Exception as e:
                         self.logger.error(f"Ошибка удаления файла {image_uuid}: {e}", exc_info=True)
     
             for image_uuid in to_delete:
+                self.logger.info(f"File with ID {image_uuid} deleted.")
                 self.processed_images.pop(image_uuid, None)
+            self.logger.info("Finished cleanup old files.")

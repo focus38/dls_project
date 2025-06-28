@@ -19,6 +19,8 @@ OCR_MODEL_PATH = './models/emeter_ocr_v1.pt'
 detector_service = None
 logger = logging.getLogger(__name__)
 
+BINDING_PORT = int(os.getenv("PORT", "8080"))
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global detector_service
@@ -79,4 +81,4 @@ async def get_values(image_uuid: str):
         raise HTTPException(status_code=500, detail='Some error occurred.')
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", "8080")), log_level="info", log_config="log_config.yaml")
+    uvicorn.run(app, host="0.0.0.0", port=BINDING_PORT, log_level="info", log_config="log_config.yaml")
