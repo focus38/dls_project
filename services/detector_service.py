@@ -5,7 +5,7 @@ import asyncio
 import logging
 from typing import Dict
 
-from PIL import Image
+from PIL import Image, ImageOps
 from fastapi import UploadFile
 
 from datetime import datetime, timedelta
@@ -52,13 +52,24 @@ class DetectorService:
     async def handle_upload(self, file: UploadFile):
         # Генерируем идентификатор для изображения.
         image_uuid = str(uuid.uuid4())
-        self.logger.info(f"Upload file with ID {image_uuid}.")
+        original_filename = file.filename
+        self.logger.info(f"Upload file {original_filename} with ID {image_uuid}.")
+        # Извлекаем extension файла
+        filename_without_ext, file_ext = os.path.splitext(original_filename)
         # Сохраняем изображение во временную папку.
-        file_path = os.path.join(self.TEMP_IMAGE_FOLDER, f"{image_uuid}.jpg")
+        file_path = os.path.join(self.TEMP_IMAGE_FOLDER, f"{image_uuid}.{file_ext}")
         
         with open(file_path, "wb") as buffer:
             buffer.write(await file.read())
 
+        # Добавляем в хранилище файлов.
+        self.processed_images[image_uuid] = {
+                "input_path": file_path,
+                "output_path": None,
+                "uploaded_at": datetime.now(),
+                "timestamp": None,
+                "values": None
+            }
         # Добавляем в очередь на обработку.
         await self.processing_queue.put(image_uuid)
         self.logger.info(f"Put file {image_uuid} to processing queue.")
@@ -90,7 +101,8 @@ class DetectorService:
     async def _process_queue(self):
         while True:
             image_uuid = await self.processing_queue.get()
-            input_path = os.path.join(self.TEMP_IMAGE_FOLDER, f"{image_uuid}.jpg")
+            image_data = self.processed_images[image_uuid]
+            input_path = image_data["input_path"]
 
             # Создаем задачу для обработки изображения и сохраняем ссылку на нее.
             task = asyncio.create_task(self._process_image(image_uuid, input_path))
@@ -102,7 +114,7 @@ class DetectorService:
     async def _process_image(self, image_uuid: str, input_path: str):
         try:
             def sync_process_image():
-                img = Image.open(input_path)
+                img = self._open_image(input_path)
                 detector_result = self.detector.process_image(image_uuid, img)
                 if detector_result is None:
                     return [], detector_result
@@ -118,12 +130,14 @@ class DetectorService:
                     indicator_images.append(cropped_img)
                 if len(indicator_images) == 0:
                     return [], detector_result
+                
                 indicator_values = self.recognizer.parse_indicator_values(indicator_images)
                 return indicator_values, detector_result
             
             values, detector_result = await asyncio.get_event_loop().run_in_executor(None, sync_process_image)
             
-            output_path = os.path.join(self.TEMP_IMAGE_FOLDER, f"processed_{image_uuid}.jpg")
+            file_dir, file_ext = os.path.splitext(input_path)
+            output_path = os.path.join(self.TEMP_IMAGE_FOLDER, f"processed_{image_uuid}.{file_ext}")
             detector_image = detector_result.plot()
             result_image = Image.fromarray(detector_image[..., ::-1])
             result_image.save(output_path)
@@ -165,3 +179,9 @@ class DetectorService:
                 self.logger.info(f"File with ID {image_uuid} deleted.")
                 self.processed_images.pop(image_uuid, None)
             self.logger.info("Finished cleanup old files.")
+
+    def _open_image(self, input_path: str):
+        image = Image.open(input_path)
+        # Применяем настройки из EXIF, иначе изображение может быть повернутым после открытия.
+        image = ImageOps.exif_transpose(image)
+        return image
