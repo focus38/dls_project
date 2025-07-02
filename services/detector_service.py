@@ -57,7 +57,7 @@ class DetectorService:
         # Извлекаем extension файла
         filename_without_ext, file_ext = os.path.splitext(original_filename)
         # Сохраняем изображение во временную папку.
-        file_path = os.path.join(self.TEMP_IMAGE_FOLDER, f"{image_uuid}.{file_ext}")
+        file_path = os.path.join(self.TEMP_IMAGE_FOLDER, f"{image_uuid}{file_ext}")
         
         with open(file_path, "wb") as buffer:
             buffer.write(await file.read())
@@ -137,7 +137,7 @@ class DetectorService:
             values, detector_result = await asyncio.get_event_loop().run_in_executor(None, sync_process_image)
             
             file_dir, file_ext = os.path.splitext(input_path)
-            output_path = os.path.join(self.TEMP_IMAGE_FOLDER, f"processed_{image_uuid}.{file_ext}")
+            output_path = os.path.join(self.TEMP_IMAGE_FOLDER, f"processed_{image_uuid}{file_ext}")
             detector_image = detector_result.plot()
             result_image = Image.fromarray(detector_image[..., ::-1])
             result_image.save(output_path)
