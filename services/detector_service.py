@@ -77,8 +77,12 @@ class DetectorService:
 
     async def check_status(self, image_uuid: str):
         if image_uuid in self.processed_images:
-            return {"status": "processed"}
-        elif image_uuid in self.processing_tasks:
+            process_image = self.processed_images[image_uuid]
+            if process_image["output_path"] != None:
+                return {"status": "processed"}
+            else:
+                return {"status": "processing"}
+        if image_uuid in self.processing_tasks:
             return {"status": "processing"}
         else:
             raise ImageNotFoundException(message="Image not found.")
@@ -88,7 +92,10 @@ class DetectorService:
             raise ImageNotFoundException(message="Image not processed or not found.")
 
         process_image = self.processed_images[image_uuid]
-        return process_image["output_path"]
+        output_path = process_image["output_path"]
+        if output_path == None:
+            raise ImageNotFoundException(message="Image not processed or not found.")
+        return output_path
 
     async def get_values(self, image_uuid: str):
         if image_uuid not in self.processed_images:

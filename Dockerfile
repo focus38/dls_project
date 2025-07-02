@@ -16,7 +16,14 @@ RUN apt-get update && \
     pip install --no-cache-dir /app/wheels/* && pip install --no-cache-dir uvicorn
 
 # Copy project
-COPY . /app/
+COPY /static /app/static
+COPY /common /app/common
+COPY /models /app/models
+COPY /services /app/services
+
+COPY /main.py /app/main.py
+COPY /log_config.yaml /app/log_config.yaml
+COPY /packages.txt /app/packages.txt
 
 # Define the command to start the container
 CMD python main.py
